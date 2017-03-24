@@ -2,47 +2,30 @@ package main
 
 import (
     "fmt"
-    "net"
-    "os"
-    "bufio"
-)
-
-const (
-    CONN_HOST = "localhost"
-    CONN_PORT = "8080"
-    CONN_TYPE = "tcp"
+    "net/http"
+    "time"
+    "io"
+    "log"
 )
 
 func ServerStart() {
 	fmt.Println("Starting server")
-    l, err := net.Listen(CONN_TYPE, CONN_HOST+":"+CONN_PORT)
-    if err != nil {
-        fmt.Println("Error listening:", err.Error())
-        os.Exit(1)
+    http.HandleFunc("/foo", ServeFoo)
+    http.HandleFunc("/", Index)
+    s := &http.Server{
+    	Addr:           ":8080",
+    	Handler:        nil,
+    	ReadTimeout:    10 * time.Second,
+    	WriteTimeout:   10 * time.Second,
+    	MaxHeaderBytes: 1 << 20,
     }
-
-    defer l.Close()
-    fmt.Println("Listening on " + CONN_HOST + ":" + CONN_PORT)
-
-    for {
-        conn, err := l.Accept()
-        if err != nil {
-            fmt.Println("Error accepting: ", err.Error())
-            os.Exit(1)
-        }
-
-        go handleRequest(conn)
-    }
+    log.Fatal(s.ListenAndServe())
 }
 
-func handleRequest(conn net.Conn) {
-  request, err := bufio.NewReader(conn).ReadString('\n')
-  if err != nil {
-    fmt.Println("Error reading:", err.Error())
-  }
+func ServeFoo(response http.ResponseWriter, request *http.Request) {
+    io.WriteString(response, "Hello, Foo!\n")
+}
 
-  fmt.Println("Received: ", string(request))
-
-  conn.Write([]byte("HTTP/1.1 200 OK\n\nHello, World!"))
-  conn.Close()
+func Index(response http.ResponseWriter, request *http.Request) {
+    io.WriteString(response, "Hello, World!\n")
 }
